@@ -1,21 +1,4 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
-# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-""" Fine-tuning the library models for named entity recognition on CoNLL-2003 (Bert or Roberta). """
-
-from __future__ import absolute_import, division, print_function
+""" Fine-tuning the document layout supporting models for token classification (Bert, Roberta or LayoutLM). """
 
 import argparse
 import glob
@@ -294,6 +277,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
 
 def to_list(tensor):
     return tensor.detach().cpu().tolist()
+
 def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""):
     eval_dataset,features, examples = load_and_cache_examples(
         args, tokenizer, labels, pad_token_label_id, mode=mode
@@ -342,6 +326,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
             result = SquadResult(unique_id, start_logits, end_logits)
             all_results.append(result)
     evalTime = timeit.default_timer() - start_time
+    
     logger.info("  Evaluation done in total %f secs (%f sec per example)", evalTime, evalTime / len(eval_dataset))
     output_prediction_file = os.path.join(args.output_dir, "predictions_{}.json".format(prefix))
     output_nbest_file = os.path.join(args.output_dir, "nbest_predictions_{}.json".format(prefix))
@@ -693,8 +678,8 @@ def main():
     # Set seed
     set_seed(args)
 
-    # Prepare CONLL-2003 task
-    labels = ["start","end"]
+    # Prepare for QA task
+    labels = ["start", "end"]
     num_labels = len(labels)
     # Use cross entropy ignore index as padding label id so that only real label ids contribute to the loss later
     pad_token_label_id = CrossEntropyLoss().ignore_index
@@ -704,7 +689,7 @@ def main():
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
     args.model_type = args.model_type.lower()
-    print("ARGS",args)
+    print("ARGS", args)
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     print("Config_name",args.config_name)
     
@@ -744,6 +729,7 @@ def main():
             args, train_dataset, model, tokenizer, labels, pad_token_label_id
         )
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
+     
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
         # Create output directory if needed
